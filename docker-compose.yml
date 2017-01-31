@@ -1,0 +1,85 @@
+
+elasticsearch:
+    image: elasticsearch
+    container_name: elasticsearch
+    volumes:
+        - c:/docker/elk/elasticsearch/data:/usr/share/elasticsearch/data
+    ports:
+        - 9200:9200
+
+logstash:
+    image: logstash
+    container_name: logstash
+    volumes:
+        - c:/docker/elk/logstash/config:/etc/logstash/conf.d
+    links:
+        - elasticsearch:elasticsearch
+    ports:
+        - 9291:9291
+        - 9291:9291/udp
+    command: logstash -f /etc/logstash/conf.d/
+
+kibana:
+    image: kibana
+    container_name: kibana
+    links:
+        - elasticsearch:elasticsearch
+    ports:
+        - 5601:5601
+    environment:
+        - ELASTICSEARCH_URL=http://elasticsearch:9200
+
+gogs:
+    image: gogs
+    container_name: gogs
+    volumes:
+        - c:/docker/gogs:/data
+    ports:
+        - 10022:22
+        - 10080:3000
+
+sonarqube_mysql:
+    image: mysql
+    container_name: sonarqube_mysql
+    volumes:
+        - C:/docker/sonarqube/mysql:/var/lib/mysql
+    environment:
+        - MYSQL_ROOT_PASSWORD=mysql 
+        - MYSQL_DATABASE=sonar 
+        - MYSQL_USER=sonar 
+        - MYSQL_PASSWORD=sonar
+
+sonarqube:
+    image: sonarqube
+    container_name: sonarqube
+    links:
+        - sonarqube_mysql:mysql
+    ports:
+        - 9010:9000
+        - 9092:9092
+    environment:
+        - SONARQUBE_JDBC_USERNAME=sonar 
+        - SONARQUBE_JDBC_PASSWORD=sonar 
+        - SONARQUBE_JDBC_URL=jdbc:mysql://sonarqube_mysql/sonar?useUnicode=true&characterEncoding=utf8
+
+mattermost:
+    image: mattermost/mattermost-preview
+    container_name: mattermost
+    ports:
+        - 8065:8065
+
+jenkins:
+    image: jenkins
+    container_name: jenkins
+    links:
+        - gogs:gogs
+        - sonarqube:sonarqube
+        - mattermost:mattermost/mattermost-preview
+    volumes:
+        - c:/docker/jenkins:/var/jenkins_home
+    ports:
+        - 9091:8080
+        - 50000:50000
+    environment:
+        - JAVA_OPTS="-Duser.timezone=Europe/Berlin"
+
